@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Tracker Performance Dashboard</title>
+  
+  <!-- Tailwind CSS Play CDN with Automatic System Dark Mode Configuration -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'media',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Premium Smooth Scroll & Visual Heights */
+    html {
+      scroll-behavior: smooth;
+    }
+    .sticky-col {
+      max-height: calc(100vh - 120px);
+    }
+    /* Custom style to make input[type="date"] look better */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: 0.2s;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans pb-10 transition-colors duration-300">
+
+  <!-- Loading Screen -->
+  <div id="loader" class="fixed inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-900 z-50">
+    <div class="animate-spin rounded-full h-14 w-14 border-t-4 border-b-4 border-indigo-500"></div>
+  </div>
+
+  <!-- Header/App Bar -->
+  <header class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-sm sticky top-0 z-20 border-b border-slate-200 dark:border-slate-700">
+    <div class="w-[95vw] lg:w-[90vw] max-w-[1400px] mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg shadow-indigo-500/30 text-white">
+          <i data-lucide="book-open" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-extrabold bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 bg-clip-text text-transparent">
+            Study Tracker
+          </h1>
+          <p class="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wide uppercase mt-0.5">Daily Performance Log</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout (Responsive viewport-width) -->
+  <main class="w-[95vw] lg:w-[90vw] max-w-[1400px] mx-auto px-2 sm:px-4 mt-6">
+    
+    <!-- Warning message if using Mock/Fallback Data -->
+    <div id="warning-banner" class="hidden mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 p-4 rounded-2xl flex items-start shadow-sm">
+      <i data-lucide="alert-circle" class="w-6 h-6 text-amber-600 dark:text-amber-500 mt-0.5 mr-3 flex-shrink-0"></i>
+      <div>
+        <h3 class="text-sm font-bold text-amber-800 dark:text-amber-400">Showing Visual Demo Data</h3>
+        <p class="text-xs text-amber-700 dark:text-amber-500 mt-1 font-medium leading-relaxed animate-pulse">
+          Could not connect directly to the Google Sheet. Automatically showing colorful demo data based perfectly on your form fields!
+        </p>
+      </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+      
+      <!-- LEFT COLUMN: Filtering & Stats Panel (Sticky on Laptops) -->
+      <div class="w-full lg:w-[30%] xl:w-1/4 space-y-6 lg:sticky lg:top-28 h-fit sticky-col">
+        
+        <!-- Filter Time Period Card -->
+        <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-slate-200/60 dark:border-slate-700 transition-all hover:shadow-md">
+          <h2 class="text-lg font-bold mb-4 flex items-center text-slate-800 dark:text-white">
+            <i data-lucide="calendar-range" class="w-5 h-5 mr-2 text-indigo-500"></i>
+            Filter Time Period
+          </h2>
+          <div class="space-y-3">
+            <div class="flex gap-2">
+              <div class="w-1/2">
+                <label class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block mb-1">From</label>
+                <input 
+                  type="date" 
+                  id="date-start" 
+                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer font-medium text-sm"
+                >
+              </div>
+              <div class="w-1/2">
+                <label class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 block mb-1">To</label>
+                <input 
+                  type="date" 
+                  id="date-end" 
+                  class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer font-medium text-sm"
+                >
+              </div>
+            </div>
+            <button 
+              id="clear-date-btn" 
+              class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-colors hidden items-center justify-center"
+            >
+              <i data-lucide="x" class="w-4 h-4 mr-1.5"></i> Clear Filter
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Numerical Performance Stats -->
+        <div class="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-lg shadow-indigo-500/20 text-white">
+          <h2 class="text-lg font-bold mb-5 flex items-center text-indigo-50">
+            <i data-lucide="activity" class="w-5 h-5 mr-2"></i>
+            Period Summary
+          </h2>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white/10 rounded-2xl p-4 backdrop-blur-md border border-white/10 text-center flex flex-col justify-center">
+              <p class="text-indigo-100 text-[9px] uppercase tracking-widest font-bold mb-1">Total Days</p>
+              <p id="stat-total-entries" class="text-3xl font-black">0</p>
+            </div>
+            <div class="bg-white/10 rounded-2xl p-4 backdrop-blur-md border border-white/10 text-center flex flex-col justify-center">
+              <p class="text-indigo-100 text-[9px] uppercase tracking-widest font-bold mb-1">Total Hours</p>
+              <p id="stat-total-hours" class="text-3xl font-black">0</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT COLUMN: Search Inputs & Daily Feeds -->
+      <div class="w-full lg:w-[70%] xl:w-3/4 space-y-6">
+        
+        <!-- Interactive Search Bar -->
+        <div class="relative shadow-sm rounded-2xl group">
+          <div class="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+            <i data-lucide="search" class="h-5 w-5 text-slate-400 group-focus-within:text-indigo-500 transition-colors"></i>
+          </div>
+          <input
+            id="search-input"
+            type="text"
+            class="block w-full pl-14 pr-4 py-4 border-none ring-1 ring-slate-200 dark:ring-slate-700 rounded-2xl leading-5 bg-white dark:bg-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-base font-medium transition-all shadow-sm"
+            placeholder="Search specific subjects, notes, or tutor remarks..."
+          />
+        </div>
+
+        <!-- Scrollable Feed of Logs -->
+        <div id="logs-container" class="space-y-5">
+          <!-- Rendered Dynamically in JS -->
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Embedded Vanilla JS App Architecture -->
+  <script>
+    // --- APP STATE ---
+    const state = {
+      logs: [],
+      searchTerm: '',
+      startDate: '',
+      endDate: '',
+      usingMock: false
+    };
+
+    // --- CSV CONFIGURATION ---
+    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQeBJwcQ5EoBDBp4aCYTrQNIoHbyfQiC4ajz5k-n2oc0hFDV5fDfHLrMsypgBJGip19gohS3pPpod_e/pub?output=csv';
+
+    // --- EXPANDED DEMO DATA FALLBACK (Updated to match new requirements) ---
+    const mockData = [
+      {
+        "Timestamp": "6/16/2026 18:30:00",
+        "Score": "",
+        "Coaching Time": "2 Hours",
+        "Homework": "Pages 12-14 in Maths workbook",
+        "English Hind writing work": "Hindi writing practiced",
+        "Maths": "Solved 15 quadratic equations",
+        "Science": "",
+        "Bio": "Drew diagram of human heart",
+        "Recent paper review.": "Maths unit test: 18/20",
+        "review": "Very focused today.",
+        "Remark": "Needs to improve reading speed"
+      },
+      {
+        "Timestamp": "6/15/2026 17:00:00",
+        "Score": "",
+        "Coaching Time": "1.5 Hours",
+        "Homework": "Read Chapter 4 of Science",
+        "English Hind writing work": "",
+        "Maths": "Struggled with trigonometry basics",
+        "Science": "Chemistry formulas memorized",
+        "Bio": "",
+        "Recent paper review.": "None",
+        "review": "A bit distracted.",
+        "Remark": "Will revise trig formulas tomorrow"
+      },
+      {
+        "Timestamp": "6/14/2026 16:00:00",
+        "Score": "",
+        "Coaching Time": "2 Hours",
+        "Homework": "No homework assigned today",
+        "English Hind writing work": "Both pages done",
+        "Maths": "Started calculus",
+        "Science": "Physics practicals",
+        "Bio": "Plant biology overview",
+        "Recent paper review.": "",
+        "review": "Covered a lot of ground today.",
+        "Remark": "Needs to focus on calculus fundamentals"
+      },
+      {
+        "Timestamp": "6/13/2026 18:00:00",
+        "Score": "",
+        "Coaching Time": "2.5 Hours",
+        "Homework": "Revise notes for tomorrow's mock",
+        "English Hind writing work": "English essay completed",
+        "Maths": "",
+        "Science": "Revision of Force and Motion",
+        "Bio": "",
+        "Recent paper review.": "Science mock 90%",
+        "review": "Excellent performance on mock.",
+        "Remark": "Keep it up"
+      }
+    ];
+
+    // --- CSV PARSING UTILITY ---
+    const parseCSV = (str) => {
+      const arr = [];
+      let quote = false;
+      let row = 0;
+      let col = 0;
+      for (let c = 0; c < str.length; c++) {
+        let cc = str[c], nc = str[c + 1];
+        arr[row] = arr[row] || [];
+        arr[row][col] = arr[row][col] || '';
+
+        if (cc === '"' && quote && nc === '"') { arr[row][col] += cc; ++c; continue; }
+        if (cc === '"') { quote = !quote; continue; }
+        if (cc === ',' && !quote) { ++col; continue; }
+        if (cc === '\r' && nc === '\n' && !quote) { ++row; col = 0; ++c; continue; }
+        if (cc === '\n' && !quote) { ++row; col = 0; continue; }
+        if (cc === '\r' && !quote) { ++row; col = 0; continue; }
+
+        arr[row][col] += cc;
+      }
+      
+      if (arr.length === 0) return [];
+      const headers = arr[0].map(h => h.trim());
+      const data = [];
+      
+      for (let i = 1; i < arr.length; i++) {
+        if (arr[i].length === 1 && arr[i][0] === '') continue;
+        const obj = {};
+        for (let j = 0; j < headers.length; j++) {
+          obj[headers[j]] = arr[i][j] ? arr[i][j].trim() : '';
+        }
+        data.push(obj);
+      }
+      return data;
+    };
+
+    // --- DATE FORMATTER ---
+    const formatDate = (dateString) => {
+      if (!dateString) return 'Unknown Date';
+      const date = new Date(dateString);
+      if (isNaN(date)) return 'Invalid Date';
+      
+      const options = { weekday: 'short', month: 'short', day: 'numeric' };
+      return date.toLocaleDateString(undefined, options);
+    };
+
+    // --- RENDER DYNAMIC DASHBOARD ---
+    const renderDashboard = () => {
+      // Intentionally left empty. Stats are now calculated dynamically in renderLogs() based on the selected date period.
+    };
+
+    // --- RENDER CARD ELEMENTS ---
+    const renderLogs = () => {
+      const logsContainer = document.getElementById('logs-container');
+      
+      // Filter State Log Database by Text Search AND Date
+      const filtered = state.logs.filter(log => {
+        // 1. Text Search Filter
+        const searchString = Object.values(log).map(v => v || '').join(' ').toLowerCase();
+        const matchesSearch = searchString.includes(state.searchTerm.toLowerCase());
+
+        // 2. Date Range Filter
+        let matchesDate = true;
+        if (state.startDate || state.endDate) {
+          const logDateObj = new Date(log['Timestamp']);
+          if (!isNaN(logDateObj)) {
+            // Convert log date to local YYYY-MM-DD string format to match input[type="date"]
+            const yyyy = logDateObj.getFullYear();
+            const mm = String(logDateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(logDateObj.getDate()).padStart(2, '0');
+            const localDateString = `${yyyy}-${mm}-${dd}`;
+            
+            if (state.startDate && localDateString < state.startDate) matchesDate = false;
+            if (state.endDate && localDateString > state.endDate) matchesDate = false;
+          } else {
+            matchesDate = false;
+          }
+        }
+
+        return matchesSearch && matchesDate;
+      });
+
+      // 3. Update Period Summary Stats
+      document.getElementById('stat-total-entries').innerText = filtered.length;
+      
+      let totalHours = 0;
+      filtered.forEach(log => {
+        const timeStr = (log['Coaching Time'] || '').toLowerCase();
+        // Ignore formats that just indicate a clock time (e.g., "5:00 PM") unless it specifically says "hour"
+        if (!timeStr.includes(':') || timeStr.includes('hour')) {
+          // Parse the first number found in the string (e.g., "1.5 Hours" -> 1.5)
+          const match = timeStr.match(/\d+(\.\d+)?/);
+          if (match) {
+            totalHours += parseFloat(match[0]);
+          }
+        }
+      });
+      // Show total hours cleanly (remove decimals if it's a whole number)
+      document.getElementById('stat-total-hours').innerText = totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1);
+
+      if (filtered.length === 0) {
+        logsContainer.innerHTML = `
+          <div class="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-600">
+            <i data-lucide="book-open" class="mx-auto h-14 w-14 text-slate-300 dark:text-slate-600 mb-4"></i>
+            <p class="text-slate-500 dark:text-slate-400 font-bold text-lg">No study logs found for this filter.</p>
+          </div>`;
+        lucide.createIcons();
+        return;
+      }
+
+      logsContainer.innerHTML = filtered.map(log => {
+        const timestamp = log['Timestamp'];
+        const dateObj = timestamp ? new Date(timestamp) : null;
+        const isValidDate = dateObj && !isNaN(dateObj);
+        const isToday = isValidDate && dateObj.toDateString() === new Date().toDateString();
+
+        // Subject Badges inside Cards (Only generates if data exists)
+        const mathsHtml = log['Maths'] ? createSubjectBadge('calculator', 'Maths', log['Maths'], 'blue') : '';
+        const scienceHtml = log['Science'] ? createSubjectBadge('microscope', 'Science', log['Science'], 'emerald') : '';
+        const bioHtml = log['Bio'] ? createSubjectBadge('dna', 'Bio', log['Bio'], 'purple') : '';
+
+        // Tutors Reviews Area
+        let feedbackHtml = '';
+        if (log['review'] || log['Remark']) {
+          feedbackHtml = `
+            <div class="mt-2 p-5 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-100/50 dark:border-indigo-800/30">
+              <h4 class="flex items-center text-sm font-extrabold text-indigo-900 dark:text-indigo-300 mb-3 uppercase tracking-wider">
+                <i data-lucide="message-square" class="w-4 h-4 mr-2 text-indigo-500"></i> Tutor's Feedback
+              </h4>
+              <div class="space-y-3">
+                ${log['review'] ? `
+                  <div class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl border border-white/40 dark:border-slate-700/50">
+                    <span class="font-extrabold text-[10px] uppercase tracking-widest text-indigo-500 dark:text-indigo-400 w-20 pt-0.5">Review</span> 
+                    <span class="text-sm font-medium text-slate-800 dark:text-slate-200 flex-1">${log['review']}</span>
+                  </div>` : ''}
+                ${log['Remark'] ? `
+                  <div class="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl border border-white/40 dark:border-slate-700/50">
+                    <span class="font-extrabold text-[10px] uppercase tracking-widest text-purple-500 dark:text-purple-400 w-20 pt-0.5">Remark</span> 
+                    <span class="text-sm font-medium text-slate-800 dark:text-slate-200 flex-1">${log['Remark']}</span>
+                  </div>` : ''}
+              </div>
+            </div>`;
+        }
+
+        // Details Block (Homework, Writing, Papers)
+        let detailsHtml = '';
+        const hwRow = createDetailRowHtml('book', 'amber-500', 'Homework Notes', log['Homework']);
+        const writingRow = createDetailRowHtml('pen-tool', 'fuchsia-500', 'English / Hindi Writing Work', log['English Hind writing work']);
+        const paperRow = createDetailRowHtml('file-text', 'cyan-500', 'Recent Paper / Review', log['Recent paper review.'] || log['Recent paper']);
+        
+        if (hwRow || writingRow || paperRow) {
+          detailsHtml = `
+            <div class="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-5 space-y-4 border border-slate-100 dark:border-slate-800">
+              ${hwRow}
+              ${writingRow}
+              ${paperRow}
+            </div>
+          `;
+        }
+
+        // Subject Grid Area (Uses flex to adapt smoothly if only 1 or 2 subjects are taught)
+        let subjectsGridHtml = '';
+        if (mathsHtml || scienceHtml || bioHtml) {
+          subjectsGridHtml = `
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              ${mathsHtml}
+              ${scienceHtml}
+              ${bioHtml}
+            </div>
+          `;
+        }
+
+        return `
+          <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200/60 dark:border-slate-700 overflow-hidden transition-all hover:shadow-md hover:-translate-y-1 duration-200 group">
+            
+            <!-- Card Header -->
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex flex-wrap gap-3 justify-between items-center bg-slate-50/50 dark:bg-slate-800/50 transition-colors group-hover:bg-indigo-50/30 dark:group-hover:bg-indigo-900/10">
+              <div class="flex items-center space-x-3">
+                <div class="bg-white dark:bg-slate-700 p-2 rounded-xl shadow-sm border border-slate-100 dark:border-slate-600">
+                  <i data-lucide="calendar" class="w-5 h-5 text-indigo-500"></i>
+                </div>
+                <span class="font-extrabold text-slate-900 dark:text-white text-lg">
+                  ${formatDate(log['Timestamp'])}
+                </span>
+                ${isToday ? `
+                  <span class="ml-2 px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] uppercase tracking-wider font-bold rounded-full shadow-sm">
+                    Today
+                  </span>` : ''}
+              </div>
+              
+              <!-- Start Time Badge -->
+              ${log['Coaching Time'] ? `
+                <div class="flex items-center text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-700 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-600 shadow-sm">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 mr-1.5 text-indigo-500"></i>
+                  Time: ${log['Coaching Time']}
+                </div>` : ''}
+            </div>
+
+            <div class="p-6 space-y-6">
+              ${subjectsGridHtml}
+              ${detailsHtml}
+              ${feedbackHtml}
+            </div>
+          </div>`;
+      }).join('');
+
+      // Refresh icon elements loaded inside container
+      lucide.createIcons();
+    };
+
+    // Sub-renderers for clean component generation
+    const createSubjectBadge = (icon, title, value, color) => {
+      const colorMap = {
+        blue: 'bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/50',
+        emerald: 'bg-emerald-50 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/50',
+        purple: 'bg-purple-50 text-purple-800 dark:bg-purple-900/20 dark:text-purple-300 border-purple-200/60 dark:border-purple-800/50',
+      };
+      const iconBgMap = {
+        blue: 'bg-blue-100 dark:bg-blue-800/50 text-blue-600 dark:text-blue-400 shadow-sm border border-blue-200 dark:border-transparent',
+        emerald: 'bg-emerald-100 dark:bg-emerald-800/50 text-emerald-600 dark:text-emerald-400 shadow-sm border border-emerald-200 dark:border-transparent',
+        purple: 'bg-purple-100 dark:bg-purple-800/50 text-purple-600 dark:text-purple-400 shadow-sm border border-purple-200 dark:border-transparent',
+      };
+
+      return `
+        <div class="p-4 rounded-2xl border ${colorMap[color]} flex flex-col h-full transition-transform hover:scale-[1.02] duration-200 w-full">
+          <div class="flex items-center mb-3">
+            <div class="p-2 rounded-xl ${iconBgMap[color]} mr-3">
+              <i data-lucide="${icon}" class="w-5 h-5"></i>
+            </div>
+            <span class="text-sm font-extrabold tracking-wide uppercase">${title}</span>
+          </div>
+          <span class="text-sm font-semibold leading-relaxed">${value}</span>
+        </div>`;
+    };
+
+    const createDetailRowHtml = (icon, colorHex, label, value) => {
+      if (!value) return '';
+      return `
+        <div class="flex items-start group">
+          <div class="mt-1 mr-4 p-2.5 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex-shrink-0 transition-transform group-hover:scale-110 duration-200 text-${colorHex}">
+            <i data-lucide="${icon}" class="w-5 h-5"></i>
+          </div>
+          <div class="pt-0.5">
+            <span class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400 block mb-1">${label}</span>
+            <span class="text-sm font-semibold text-slate-800 dark:text-slate-200">${value}</span>
+          </div>
+        </div>`;
+    };
+
+    // --- LIVE FEED FETCH LOGIC ---
+    const loadAppData = async () => {
+      const loader = document.getElementById('loader');
+      const warningBanner = document.getElementById('warning-banner');
+
+      try {
+        let text = '';
+        
+        // Step 1: Direct fetch attempt
+        try {
+          const response = await fetch(CSV_URL);
+          if (!response.ok) throw new Error('CORS or connection failure');
+          text = await response.text();
+        } catch (err) {
+          // Step 2: CORS Proxy fallback
+          console.warn("Direct fetch failed, falling back to secure proxy fetch...");
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(CSV_URL)}`;
+          const response = await fetch(proxyUrl);
+          if (!response.ok) throw new Error('Proxy returned non-200 response');
+          text = await response.text();
+        }
+
+        if (text.trim().startsWith('<!DOCTYPE html>')) {
+          throw new Error('Retrieved HTML instead of expected CSV format.');
+        }
+
+        const parsed = parseCSV(text);
+
+        // Sort data chronologically (newest first)
+        state.logs = parsed.sort((a, b) => {
+          const dateA = new Date(a.Timestamp || 0);
+          const dateB = new Date(b.Timestamp || 0);
+          return dateB - dateA;
+        });
+
+        state.usingMock = false;
+        warningBanner.classList.add('hidden');
+      } catch (err) {
+        console.warn("CORS fetch failed to connect to live server. Instantiating interactive demo data logs.", err.message);
+        state.logs = mockData;
+        state.usingMock = true;
+        warningBanner.classList.remove('hidden');
+      } finally {
+        // Hide Loader, Mount & Render Component State
+        loader.classList.add('hidden');
+        renderDashboard();
+        renderLogs();
+      }
+    };
+
+    // --- DOM EVENT CONTROLLERS ---
+    
+    // Text Search Controller
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      state.searchTerm = e.target.value;
+      renderLogs();
+    });
+
+    // Date Picker Controllers
+    const startInput = document.getElementById('date-start');
+    const endInput = document.getElementById('date-end');
+    const clearDateBtn = document.getElementById('clear-date-btn');
+
+    const handleDateChange = () => {
+      state.startDate = startInput.value;
+      state.endDate = endInput.value;
+      
+      // Toggle clear button visibility
+      if (state.startDate || state.endDate) {
+        clearDateBtn.classList.remove('hidden');
+        clearDateBtn.classList.add('flex');
+      } else {
+        clearDateBtn.classList.add('hidden');
+        clearDateBtn.classList.remove('flex');
+      }
+      
+      renderLogs();
+    };
+
+    startInput.addEventListener('change', handleDateChange);
+    endInput.addEventListener('change', handleDateChange);
+
+    // Clear Date Filter Button
+    clearDateBtn.addEventListener('click', () => {
+      state.startDate = '';
+      state.endDate = '';
+      startInput.value = '';
+      endInput.value = '';
+      clearDateBtn.classList.add('hidden');
+      clearDateBtn.classList.remove('flex');
+      renderLogs();
+    });
+
+    // --- APP START UP ---
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      loadAppData();
+    });
+  </script>
+</body>
+</html>
