@@ -73,18 +73,6 @@
 
   <!-- Main Content Layout (Responsive viewport-width) -->
   <main class="w-[95vw] lg:w-[90vw] max-w-[1400px] mx-auto px-2 sm:px-4 mt-6">
-    
-    <!-- Warning message if using Mock/Fallback Data -->
-    <div id="warning-banner" class="hidden mb-8 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 p-4 rounded-2xl flex items-start shadow-sm">
-      <i data-lucide="alert-circle" class="w-6 h-6 text-amber-600 dark:text-amber-500 mt-0.5 mr-3 flex-shrink-0"></i>
-      <div>
-        <h3 class="text-sm font-bold text-amber-800 dark:text-amber-400">Showing Visual Demo Data</h3>
-        <p class="text-xs text-amber-700 dark:text-amber-500 mt-1 font-medium leading-relaxed animate-pulse">
-          Could not connect directly to the Google Sheet. Automatically showing colorful demo data based perfectly on your form fields!
-        </p>
-      </div>
-    </div>
-
     <div class="flex flex-col lg:flex-row gap-8">
       
       <!-- LEFT COLUMN: Filtering & Stats Panel (Sticky on Laptops) -->
@@ -177,68 +165,11 @@
       logs: [],
       searchTerm: '',
       startDate: '',
-      endDate: '',
-      usingMock: false
+      endDate: ''
     };
 
     // --- CSV CONFIGURATION ---
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQeBJwcQ5EoBDBp4aCYTrQNIoHbyfQiC4ajz5k-n2oc0hFDV5fDfHLrMsypgBJGip19gohS3pPpod_e/pub?output=csv';
-
-    // --- EXPANDED DEMO DATA FALLBACK (Updated to match new requirements) ---
-    const mockData = [
-      {
-        "Timestamp": "6/16/2026 18:30:00",
-        "Score": "",
-        "Coaching Time": "2 Hours",
-        "Homework": "Pages 12-14 in Maths workbook",
-        "English Hind writing work": "Hindi writing practiced",
-        "Maths": "Solved 15 quadratic equations",
-        "Science": "",
-        "Bio": "Drew diagram of human heart",
-        "Recent paper review.": "Maths unit test: 18/20",
-        "review": "Very focused today.",
-        "Remark": "Needs to improve reading speed"
-      },
-      {
-        "Timestamp": "6/15/2026 17:00:00",
-        "Score": "",
-        "Coaching Time": "1.5 Hours",
-        "Homework": "Read Chapter 4 of Science",
-        "English Hind writing work": "",
-        "Maths": "Struggled with trigonometry basics",
-        "Science": "Chemistry formulas memorized",
-        "Bio": "",
-        "Recent paper review.": "None",
-        "review": "A bit distracted.",
-        "Remark": "Will revise trig formulas tomorrow"
-      },
-      {
-        "Timestamp": "6/14/2026 16:00:00",
-        "Score": "",
-        "Coaching Time": "2 Hours",
-        "Homework": "No homework assigned today",
-        "English Hind writing work": "Both pages done",
-        "Maths": "Started calculus",
-        "Science": "Physics practicals",
-        "Bio": "Plant biology overview",
-        "Recent paper review.": "",
-        "review": "Covered a lot of ground today.",
-        "Remark": "Needs to focus on calculus fundamentals"
-      },
-      {
-        "Timestamp": "6/13/2026 18:00:00",
-        "Score": "",
-        "Coaching Time": "2.5 Hours",
-        "Homework": "Revise notes for tomorrow's mock",
-        "English Hind writing work": "English essay completed",
-        "Maths": "",
-        "Science": "Revision of Force and Motion",
-        "Bio": "",
-        "Recent paper review.": "Science mock 90%",
-        "review": "Excellent performance on mock.",
-        "Remark": "Keep it up"
-      }
-    ];
 
     // --- CSV PARSING UTILITY ---
     const parseCSV = (str) => {
@@ -284,11 +215,6 @@
       
       const options = { weekday: 'short', month: 'short', day: 'numeric' };
       return date.toLocaleDateString(undefined, options);
-    };
-
-    // --- RENDER DYNAMIC DASHBOARD ---
-    const renderDashboard = () => {
-      // Intentionally left empty. Stats are now calculated dynamically in renderLogs() based on the selected date period.
     };
 
     // --- RENDER CARD ELEMENTS ---
@@ -492,7 +418,7 @@
     // --- LIVE FEED FETCH LOGIC ---
     const loadAppData = async () => {
       const loader = document.getElementById('loader');
-      const warningBanner = document.getElementById('warning-banner');
+      const logsContainer = document.getElementById('logs-container');
 
       try {
         let text = '';
@@ -524,18 +450,20 @@
           return dateB - dateA;
         });
 
-        state.usingMock = false;
-        warningBanner.classList.add('hidden');
-      } catch (err) {
-        console.warn("CORS fetch failed to connect to live server. Instantiating interactive demo data logs.", err.message);
-        state.logs = mockData;
-        state.usingMock = true;
-        warningBanner.classList.remove('hidden');
-      } finally {
-        // Hide Loader, Mount & Render Component State
-        loader.classList.add('hidden');
-        renderDashboard();
         renderLogs();
+      } catch (err) {
+        console.error("Failed to load data:", err.message);
+        // Show an error state instead of mock data
+        logsContainer.innerHTML = `
+          <div class="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-red-300 dark:border-red-800">
+            <i data-lucide="wifi-off" class="mx-auto h-14 w-14 text-red-400 dark:text-red-500 mb-4"></i>
+            <p class="text-slate-800 dark:text-slate-200 font-bold text-lg">Failed to load data.</p>
+            <p class="text-slate-500 dark:text-slate-400 text-sm mt-2 px-4">Ensure your internet is connected and your Google Sheet is published to the web.</p>
+          </div>`;
+        lucide.createIcons();
+      } finally {
+        // Hide Loader
+        loader.classList.add('hidden');
       }
     };
 
