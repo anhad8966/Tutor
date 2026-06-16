@@ -197,7 +197,11 @@
       const data = [];
       
       for (let i = 1; i < arr.length; i++) {
-        if (arr[i].length === 1 && arr[i][0] === '') continue;
+        if (arr[i].length === 1 && arr[i][0] === '') continue; // Skip empty rows
+        
+        // Skip rows that look like Google HTML tags to prevent parsing garbage data
+        if (arr[i][0] && arr[i][0].includes('<html') || arr[i][0].includes('<body')) continue;
+
         const obj = {};
         for (let j = 0; j < headers.length; j++) {
           obj[headers[j]] = arr[i][j] ? arr[i][j].trim() : '';
@@ -270,7 +274,7 @@
         logsContainer.innerHTML = `
           <div class="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-slate-300 dark:border-slate-600">
             <i data-lucide="book-open" class="mx-auto h-14 w-14 text-slate-300 dark:text-slate-600 mb-4"></i>
-            <p class="text-slate-500 dark:text-slate-400 font-bold text-lg">No study logs found for this filter.</p>
+            <p class="text-slate-500 dark:text-slate-400 font-bold text-lg">No study logs found.</p>
           </div>`;
         lucide.createIcons();
         return;
@@ -423,25 +427,29 @@
       try {
         let text = '';
         
-        // Step 1: Direct fetch attempt
+        // Step 1: Direct fetch attempt (Usually works natively for published CSVs)
         try {
           const response = await fetch(CSV_URL);
-          if (!response.ok) throw new Error('CORS or connection failure');
+          if (!response.ok) throw new Error(`Direct Fetch Failed: HTTP ${response.status}`);
           text = await response.text();
         } catch (err) {
           // Step 2: CORS Proxy fallback
-          console.warn("Direct fetch failed, falling back to secure proxy fetch...");
+          console.warn("Direct fetch failed, falling back to secure proxy fetch...", err);
           const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(CSV_URL)}`;
           const response = await fetch(proxyUrl);
-          if (!response.ok) throw new Error('Proxy returned non-200 response');
+          if (!response.ok) throw new Error(`Proxy Fetch Failed: HTTP ${response.status}`);
           text = await response.text();
         }
 
+        // Failsafe: if we requested CSV but got an HTML page (like a login screen)
         if (text.trim().startsWith('<!DOCTYPE html>')) {
-          throw new Error('Retrieved HTML instead of expected CSV format.');
+          throw new Error('Retrieved HTML instead of expected CSV format. Google is demanding a login.');
         }
 
         const parsed = parseCSV(text);
+        if(parsed.length === 0) {
+            throw new Error('Successfully connected, but the spreadsheet contains no data rows.');
+        }
 
         // Sort data chronologically (newest first)
         state.logs = parsed.sort((a, b) => {
@@ -453,12 +461,19 @@
         renderLogs();
       } catch (err) {
         console.error("Failed to load data:", err.message);
-        // Show an error state instead of mock data
+        
+        // SHOW DETAILED ERROR IN UI
         logsContainer.innerHTML = `
-          <div class="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-red-300 dark:border-red-800">
+          <div class="text-center py-10 bg-white dark:bg-slate-800 rounded-3xl border border-dashed border-red-300 dark:border-red-800">
             <i data-lucide="wifi-off" class="mx-auto h-14 w-14 text-red-400 dark:text-red-500 mb-4"></i>
-            <p class="text-slate-800 dark:text-slate-200 font-bold text-lg">Failed to load data.</p>
-            <p class="text-slate-500 dark:text-slate-400 text-sm mt-2 px-4">Ensure your internet is connected and your Google Sheet is published to the web.</p>
+            <p class="text-slate-800 dark:text-slate-200 font-bold text-xl mb-2">Access Denied by Google</p>
+            <p class="text-slate-500 dark:text-slate-400 text-sm px-4 max-w-md mx-auto leading-relaxed">
+              Google Sheets is blocking the app from reading the file. Ensure the sheet is published as <b>CSV</b> and is <b>not restricted</b> to an organization.
+            </p>
+            <div class="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-xl inline-block text-left max-w-[90%] overflow-x-auto">
+              <p class="text-[10px] uppercase tracking-widest font-extrabold text-red-500 dark:text-red-400 mb-1">Developer Error Log:</p>
+              <code class="text-sm font-mono text-red-600 dark:text-red-300">${err.message}</code>
+            </div>
           </div>`;
         lucide.createIcons();
       } finally {
